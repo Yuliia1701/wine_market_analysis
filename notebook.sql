@@ -10,6 +10,17 @@ ORDER BY ratings_count DESC
 LIMIT 10;
 
 
+SELECT wines.name AS wine_name, regions.name AS region_name, regions.country_code, ratings_average, ratings_count, user_structure_count
+FROM regions
+INNER JOIN wines
+ON regions.id = wines.region_id
+ORDER BY ratings_average DESC
+LIMIT 10;
+
+SELECT *
+FROM wines
+LIMIT 3;
+
 CREATE VIEW wines_region AS 
 SELECT * 
 FROM wines
@@ -20,7 +31,7 @@ SELECT *
 FROM wines_region
 LIMIT 3;
 
-SELECT DISTINCT id, name, ratings_average, ratings_count, country_code
+SELECT DISTINCT id, name, ratings_average, ratings_count, country_code,
 FROM wines_region
 ORDER BY ratings_count DESC
 LIMIT 10;
@@ -93,19 +104,20 @@ LIMIT 5;
 UPDATE wines
 SET winery_name = (SELECT name FROM wineries WHERE wineries.id = wines.winery_id)
 
-SELECT winery_name, ROUND(AVG(ratings_average), 2), SUM(ratings_count)
+SELECT winery_name, ROUND(AVG(ratings_average), 1), SUM(ratings_count), name, SUM(users_count)
 FROM countries_wines_region
 GROUP BY winery_name
-ORDER BY SUM(ratings_count) DESC
-LIMIT 10;
+HAVING ROUND(AVG(ratings_average), 1) > 4.6
+
+ORDER BY SUM(ratings_count) DESC;
 
 
-SELECT winery_name, ROUND(AVG(ratings_average), 2), 
-SUM(ratings_count), SUM(users_count)
+SELECT winery_name, ROUND(AVG(ratings_average), 1), 
+SUM(ratings_count), SUM(users_count), name
 FROM countries_wines_region
 GROUP BY winery_name
-ORDER BY SUM(ratings_count) DESC
-LIMIT 10;
+HAVING ROUND(AVG(ratings_average), 1) > 4.6
+ORDER BY SUM(ratings_count) DESC;
 
 /*markdown
 (ROUND(SUM(ratings_count))/(SUM(users_count)*100)) AS test
@@ -113,13 +125,14 @@ LIMIT 10;
 
 SELECT winery_name, ROUND(AVG(ratings_average), 2), 
 SUM(ratings_count), SUM(users_count), 
-ROUND(((SUM(ratings_count))*100 / (SUM(users_count))), 2) AS test
+(SUM(ratings_count))*100 / (SUM(users_count)) AS test, name
 FROM countries_wines_region
 GROUP BY winery_name
-ORDER BY test DESC;
+HAVING ROUND(AVG(ratings_average), 2) > 4.6
+ORDER BY SUM(ratings_count) DESC;
 
 
-SELECT winery_name, ROUND(AVG(ratings_average), 2) AS ratings_average, SUM(ratings_count) AS ratings_count
+SELECT winery_name, ROUND(AVG(ratings_average), 1) AS ratings_average, SUM(ratings_count) AS ratings_count
 FROM wines
 GROUP BY winery_name
 ORDER BY ratings_count DESC
@@ -197,12 +210,85 @@ AND count > 10
 GROUP BY flavor_groups
 ORDER BY wine_name;
 
+SELECT DISTINCT group_name AS flavor_groups
+FROM wines_keywords_wine_keywords1;
+
+SELECT DISTINCT group_name AS flavor_groups, "name:1" AS tastes
+FROM wines_keywords_wine_keywords1
+WHERE tastes IN ('coffee', 'toast', 'green apple', 'cream', 'citrus')
+
+ORDER BY flavor_groups;
+
+CREATE VIEW wines_keywords_wine_keywords1_regions1 AS 
+SELECT * 
+FROM wines_keywords_wine_keywords1
+INNER JOIN regions
+ON wines_keywords_wine_keywords1.region_id = regions.id;
+
+SELECT *
+FROM wines_keywords_wine_keywords1_regions1
+LIMIT 3;
+
+SELECT DISTINCT wine_id, name AS wine_name, COUNT("name:1") AS tastes_count, ratings_average, country_code
+FROM wines_keywords_wine_keywords1_regions1
+WHERE count > 10
+AND keyword_type IN ('primary')
+AND "name:1" IN ('coffee', 'toast', 'green apple', 'cream', 'citrus')
+GROUP BY wine_id
+HAVING COUNT(DISTINCT "name:1") = 5
+ORDER BY ratings_average DESC;
+
+SELECT DISTINCT wine_id, name AS wine_name, COUNT(group_name) AS flavor_groups, COUNT("name:1") AS tastes_count, COUNT(count)
+FROM wines_keywords_wine_keywords1
+WHERE count > 10
+AND keyword_type IN ('primary')
+AND wine_id IN (7122486)
+AND "name:1" IN ('coffee', 'toast', 'green apple', 'cream', 'citrus')
+ORDER BY tastes_count;
+
+SELECT DISTINCT wine_id, name AS wine_name, group_name AS flavor_groups, "name:1" AS tastes, count
+FROM wines_keywords_wine_keywords1
+WHERE count > 10
+AND keyword_type IN ('primary')
+AND wine_id IN (7122486)
+AND tastes IN ('coffee', 'toast', 'green apple', 'cream', 'citrus');
+
+SELECT DISTINCT name AS wine_name, group_name AS flavor_groups, count, COUNT("name:1") AS tastes_count
+FROM wines_keywords_wine_keywords1
+WHERE count > 10
+AND keyword_type IN ('primary')
+AND wine_name IN ('Tignanello')
+GROUP BY flavor_groups;
+
+SELECT DISTINCT name AS wine_name, COUNT(group_name) AS flavor_groups, COUNT(count), COUNT("name:1") AS tastes_count
+FROM wines_keywords_wine_keywords1
+WHERE count > 10
+AND keyword_type IN ('primary')
+AND "name:1" IN ('coffee', 'toast', 'green apple', 'cream', 'citrus')
+GROUP BY wine_name;
+
+SELECT *
+FROM wines_keywords_wine_keywords1
+LIMIT 3;
+
+SELECT name AS wine_name, ratings_average, ratings_count, group_name AS flavor_group, keyword_type, count, "name:1" AS tastes
+FROM wines_keywords_wine_keywords1
+
+LIMIT 3;
+
+SELECT name AS wine_name, group_name AS flavor_group, keyword_type, "name:1" AS tastes
+FROM wines_keywords_wine_keywords1
+WHERE wine_name IN ('Brunello di Montalcino Riserva')
+AND keyword_type IN ('primary')
+GROUP BY tastes
+ORDER BY flavor_group
+LIMIT 30;
+
 SELECT DISTINCT group_name AS flavor_groups, "name:1" AS tastes
 FROM wines_keywords_wine_keywords1
 WHERE tastes IN ('coffee', 'toast', 'green apple', 'cream', 'citrus')
 AND count > 10
 ORDER BY flavor_groups;
-
 
 /*markdown
 We would like to do a selection of wines that are easy to find all over the world. Find the top 3 most common grape all over the world and for each grape, give us the the 5 best rated wines.
@@ -238,8 +324,13 @@ LIMIT 3;
 SELECT grape_id, name AS grape_name, COUNT(country_code), wines_count
 FROM most_used_grapes_per_country_grapes
 GROUP BY grape_id
-ORDER BY COUNT(country_code) DESC
-LIMIT 3;
+ORDER BY wines_count DESC
+LIMIT 10;
+
+SELECT grape_id, name AS grape_name, wines_count, country_code
+FROM most_used_grapes_per_country_grapes
+WHERE grape_name IN ('Chardonnay')
+ORDER BY wines_count DESC;
 
 /*markdown
 We would to give create a country leaderboard, give us a visual that shows the average wine rating for each country. Do the same for the vintages.
@@ -300,3 +391,38 @@ ORDER BY vintage_average_rating DESC;
 /*markdown
 Give us any other useful insights you found in our data. Be creative!
 */
+
+/*markdown
+One of our VIP client like Cabernet Sauvignon, he would like a top 5 recommandation, which wines would you recommend to him?
+*/
+
+SELECT *
+FROM wines_keywords_wine_keywords1
+WHERE name IN ('Cabernet Sauvignon')
+LIMIT 3;
+
+SELECT DISTINCT wine_id, name AS wine_name, group_name
+FROM wines_keywords_wine_keywords1
+WHERE wine_name IN ('Cabernet Sauvignon')
+AND keyword_type IN ('primary')
+AND count > 10
+GROUP BY wine_id, group_name
+ORDER BY wine_id;
+
+SELECT DISTINCT wine_id, name AS wine_name, tannin, "name:1" AS tastes
+FROM wines_keywords_wine_keywords1
+WHERE wine_name IN ('Cabernet Sauvignon')
+GROUP BY tastes
+ORDER BY wine_id;
+
+SELECT DISTINCT group_name
+FROM wines_keywords_wine_keywords1
+GROUP BY group_name;
+
+SELECT DISTINCT wine_id, name AS wine_name, group_name
+FROM wines_keywords_wine_keywords1
+WHERE wine_name IN ('Cabernet Sauvignon')
+AND keyword_type IN ('primary')
+AND count > 10
+GROUP BY wine_id, group_name
+ORDER BY wine_id;
