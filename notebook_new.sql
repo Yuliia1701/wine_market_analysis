@@ -139,12 +139,3 @@ on v.wine_id=w.id
 WHERE w.name LIKE "Cabernet Sauvignon%"
 AND w.ratings_average > 4.5
 ORDER BY w.ratings_count DESC;
-
-SELECT countries.name AS country_name, wines.name AS wine_name, ratings_average, ratings_count, countries.users_count AS number_of_users
-FROM regions
-INNER JOIN wines
-ON regions.id = wines.region_id
-INNER JOIN countries
-ON regions.country_code = countries.code
-ORDER BY ratings_count DESC
-LIMIT 10;
