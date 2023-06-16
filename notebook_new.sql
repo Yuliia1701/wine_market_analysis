@@ -26,7 +26,7 @@ INNER JOIN wineries
 ON wines.winery_id = wineries.id
 GROUP BY country_name
 ORDER BY number_of_users DESC
-LIMIT 3;
+LIMIT 10;
 
 /*markdown
 We would like to give a price to the best winery, which one should we choose and why?
@@ -57,22 +57,6 @@ cream
 citrus
 */
 
-SELECT *
-FROM wines
-LIMIT 2;
-
-SELECT *
-FROM regions
-LIMIT 2;
-
-SELECT *
-FROM keywords
-LIMIT 2;
-
-SELECT *
-FROM keywords_wine
-LIMIT 2;
-
 SELECT wines.id AS wine_id, wines.name AS wine_name, wines.ratings_average, regions.country_code
 FROM regions
 INNER JOIN wines
@@ -93,6 +77,7 @@ FROM keywords
 INNER JOIN keywords_wine
 ON keywords_wine.keyword_id = keywords.id
 WHERE keywords_wine.count > 10
+/*AND keywords_wine.keyword_type IN ('primary')*/
 AND keywords.name IN ('coffee', 'toast', 'green apple', 'cream', 'citrus')
 ORDER BY flavor_groups;
 
@@ -142,3 +127,24 @@ INNER JOIN countries AS c
 ON r.country_code = c.code
 GROUP BY c.name 
 ORDER BY vintage_average_rating DESC;
+
+/*markdown
+
+*/
+
+SELECT v.name,w.ratings_average,w.ratings_count
+from wines as w 
+inner join vintages as v
+on v.wine_id=w.id
+WHERE w.name LIKE "Cabernet Sauvignon%"
+AND w.ratings_average > 4.5
+ORDER BY w.ratings_count DESC;
+
+SELECT countries.name AS country_name, wines.name AS wine_name, ratings_average, ratings_count, countries.users_count AS number_of_users
+FROM regions
+INNER JOIN wines
+ON regions.id = wines.region_id
+INNER JOIN countries
+ON regions.country_code = countries.code
+ORDER BY ratings_count DESC
+LIMIT 10;
